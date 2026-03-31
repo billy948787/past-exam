@@ -1,0 +1,106 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: past_exam
+      MYSQL_USER: past_exam_user
+      MYSQL_PASSWORD: past_exam_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb local/past-exam --ignore-existing;
+      mc anonymous set download local/past-exam;
+      exit 0;
+      "
+
+  backend:
+    build:
+      context: ./ntpu-past-exam-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./ntpu-past-exam-service:/app
+    environment:
+      DATABASE_HOST: mysql
+      DATABASE_PORT: "3306"
+      DATABASE_USERNAME: past_exam_user
+      DATABASE_PASSWORD: past_exam_password
+      DATABASE: past_exam
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      R2_URL: http://minio:9000
+      R2_ACCESS_KEY: minioadmin
+      R2_ACCESS_TOKEN: minioadmin
+      R2_BUCKET_NAME: past-exam
+      R2_FILE_PATH: /uploads
+      HASH_KEY: local-dev-secret-key-change-me
+      ORIGIN: http://localhost:3000
+      GOOGLE_SERVICE_CLIENT_ID: placeholder
+      GOOGLE_SERVICE_SERCET: placeholder
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./ntpu-past-exam
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./ntpu-past-exam:/app
+      - /app/node_modules
+    environment:
+      NEXT_PUBLIC_API_ORIGIN: http://localhost:8080
+      API_ORIGIN: http://backend:8080
+      NEXT_PUBLIC_GOOGLE_LOGIN_CLIENT_ID: placeholder
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  minio_data:

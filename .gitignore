@@ -1,0 +1,11 @@
+# Sub-repos (managed by their own git)
+ntpu-past-exam/
+ntpu-past-exam-service/
+
+# Env files
+.env
+.env.*
+*.local
+
+# OS
+.DS_Store

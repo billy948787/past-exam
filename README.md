@@ -22,19 +22,11 @@ A platform for National Taipei University students to upload, share, and browse 
 
 ```bash
 # 1. Clone the repo
-git clone <repo-url>
+git clone <root-repo-url> past-exam
 cd past-exam
 
-# 2. Create env files
-cp ntpu-past-exam-service/.env.example ntpu-past-exam-service/.env
-cp ntpu-past-exam/.env.example ntpu-past-exam/.env
-
-# 3. Start all services
-docker compose up --build
-
-# 4. (In another terminal) Seed the database
-#    Tables are auto-created on backend startup, no need to run Alembic.
-docker compose exec backend python scripts/seed.py
+# 2. One-command setup (clones sub-repos, creates .env, starts Docker, seeds DB)
+./bootstrap.sh
 ```
 
 ### Access
