@@ -88,10 +88,12 @@ pnpm dev
 
 ## Deployment
 
-| Component | Platform |
-|-----------|----------|
-| Frontend | [Zeabur](https://zeabur.com) |
-| Backend | [Vercel](https://vercel.com) (Python runtime) |
-| Database | MySQL (managed) |
-| Cache | Redis (managed) |
+All services are deployed on [Zeabur](https://zeabur.com):
+
+| Component | Service |
+|-----------|---------|
+| Frontend | Next.js (standalone) |
+| Backend | FastAPI (Python) |
+| Database | MySQL |
+| Cache | Redis |
 | File Storage | Cloudflare R2 |

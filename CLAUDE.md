@@ -29,7 +29,7 @@ Package manager is **pnpm** (v9.12.2). Do not use npm or yarn.
 - **React Hook Form** + **Zod** for form validation
 - **react-pdf** for PDF viewing
 - **Google OAuth** (`@react-oauth/google`) for authentication
-- Deployed on **Zeabur** as standalone Next.js
+- Deployed on **Zeabur**
 
 ### Architecture
 
@@ -74,7 +74,7 @@ Uses **Poetry** for dependency management. `requirements.txt` is an export for d
 - **Cloudflare R2** (S3-compatible) for file storage via boto3
 - **JWT** auth (HS256, python-jose) with access (1 day) / refresh (365 day) tokens
 - **Logtail** for logging (Better Stack)
-- Deployed on **Vercel** (Python runtime)
+- Deployed on **Zeabur**
 
 ### Architecture
 
