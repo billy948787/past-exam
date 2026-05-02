@@ -104,6 +104,7 @@ services:
       - ./ntpu-past-exam:/app
       - /app/node_modules
     environment:
+      CI: "true"
       NEXT_PUBLIC_API_ORIGIN: http://${HOST_IP:-localhost}:8080
       API_ORIGIN: http://${HOST_IP:-localhost}:8080
       NEXT_PUBLIC_GOOGLE_LOGIN_CLIENT_ID: placeholder
@@ -113,3 +114,4 @@ services:
 volumes:
   mysql_data:
   minio_data:
+  node_modules:
