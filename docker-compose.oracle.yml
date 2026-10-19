@@ -1,0 +1,161 @@
+name: ntpu-past-exam
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-past_exam}
+      POSTGRES_USER: ${POSTGRES_USER:-past_exam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in oracle.env}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - max_connections=50
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    shm_size: 256mb
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in oracle.env}
+    command:
+      - /bin/sh
+      - -c
+      - exec redis-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru --requirepass "$${REDIS_PASSWORD}"
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.25"
+    logging: *default-logging
+
+  backend:
+    build:
+      context: ./ntpu-past-exam-service
+      dockerfile: Dockerfile
+    image: ntpu-past-exam-backend:local
+    restart: unless-stopped
+    init: true
+    environment:
+      DATABASE_DRIVER: postgresql+psycopg
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USERNAME: ${POSTGRES_USER:-past_exam}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in oracle.env}
+      DATABASE: ${POSTGRES_DB:-past_exam}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in oracle.env}
+      R2_URL: ${R2_URL:?Set R2_URL in oracle.env}
+      R2_ACCESS_KEY: ${R2_ACCESS_KEY:?Set R2_ACCESS_KEY in oracle.env}
+      R2_ACCESS_TOKEN: ${R2_ACCESS_TOKEN:?Set R2_ACCESS_TOKEN in oracle.env}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME:?Set R2_BUCKET_NAME in oracle.env}
+      R2_FILE_PATH: ${R2_FILE_PATH:?Set R2_FILE_PATH in oracle.env}
+      HASH_KEY: ${HASH_KEY:?Set HASH_KEY in oracle.env}
+      ORIGIN: ${FRONTEND_ORIGIN:-https://past-exam.ntpu.cc}
+      GOOGLE_SERVICE_CLIENT_ID: ${GOOGLE_SERVICE_CLIENT_ID:?Set GOOGLE_SERVICE_CLIENT_ID in oracle.env}
+      GOOGLE_SERVICE_SERCET: ${GOOGLE_SERVICE_SERCET:?Set GOOGLE_SERVICE_SERCET in oracle.env}
+      AWS_EMAIL_SENDER: ${AWS_EMAIL_SENDER:-}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-}
+      AWS_ACCESS_SECRET: ${AWS_ACCESS_SECRET:-}
+      LOG_TAIL_SOURCE_KEY: ${LOG_TAIL_SOURCE_KEY:-}
+      SERVICE_NAME: ${SERVICE_NAME:-oracle-production}
+      COMMIT_SHA: ${COMMIT_SHA:-unknown}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      app:
+      caddy:
+        aliases:
+          - past-exam-api
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/ping', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+          cpus: "1.0"
+          pids: 256
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  frontend:
+    build:
+      context: ./ntpu-past-exam
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_ORIGIN: ${NEXT_PUBLIC_API_ORIGIN:-https://past-exam-api.ntpu.cc}
+        NEXT_PUBLIC_GOOGLE_LOGIN_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_LOGIN_CLIENT_ID:?Set NEXT_PUBLIC_GOOGLE_LOGIN_CLIENT_ID in oracle.env}
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+        NEXT_PUBLIC_CLARITY_MEASUREMENT_ID: ${NEXT_PUBLIC_CLARITY_MEASUREMENT_ID:-}
+        NEXT_PUBLIC_GIT_BRANCH: ${NEXT_PUBLIC_GIT_BRANCH:-main}
+    image: ntpu-past-exam-frontend:local
+    restart: unless-stopped
+    networks:
+      caddy:
+        aliases:
+          - past-exam-frontend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.25"
+          pids: 64
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+networks:
+  app:
+    internal: true
+    name: past-exam-internal
+  caddy:
+    external: true
+    name: past-exam-caddy
+
+volumes:
+  postgres_data:

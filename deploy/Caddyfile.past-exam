@@ -1,0 +1,11 @@
+past-exam.ntpu.cc {
+    encode zstd gzip
+    reverse_proxy past-exam-frontend:8080
+}
+
+past-exam-api.ntpu.cc {
+    request_body {
+        max_size 55MB
+    }
+    reverse_proxy past-exam-api:8080
+}

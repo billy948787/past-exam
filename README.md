@@ -6,9 +6,9 @@ A platform for National Taipei University students to upload, share, and browse 
 
 | Component    | Tech                                                       | Directory                 |
 | ------------ | ---------------------------------------------------------- | ------------------------- |
-| Frontend     | Next.js 14 (Pages Router), TypeScript, Tailwind, shadcn/ui | `ntpu-past-exam/`         |
+| Frontend     | Vite, React, TypeScript, Tailwind, shadcn/ui               | `ntpu-past-exam/`         |
 | Backend      | FastAPI, SQLAlchemy 2.0, Alembic                           | `ntpu-past-exam-service/` |
-| Database     | MySQL 8.0                                                  | —                         |
+| Database     | MySQL 8.0 (local), PostgreSQL 17 (Oracle production)       | —                         |
 | Cache        | Redis 7                                                    | —                         |
 | File Storage | Cloudflare R2 (MinIO locally)                              | —                         |
 
@@ -127,6 +127,12 @@ pnpm dev
 ```
 
 ## Deployment
+
+Oracle self-hosting files are documented in `deploy/README.oracle.md` and use
+`docker-compose.oracle.yml`. The production stack keeps Cloudflare R2 and runs
+PostgreSQL and Redis on a private Docker network behind the existing Caddy.
+
+The legacy Zeabur deployment is described below.
 
 All services are deployed on [Zeabur](https://zeabur.com):
 

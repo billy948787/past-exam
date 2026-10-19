@@ -1,0 +1,95 @@
+services:
+  backend:
+    build:
+      context: ${BACKEND_SOURCE_DIR:?Set BACKEND_SOURCE_DIR}
+      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE}
+    restart: unless-stopped
+    init: true
+    environment:
+      DATABASE_DRIVER: postgresql+psycopg
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USERNAME: ${POSTGRES_USER:-past_exam}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in oracle.env}
+      DATABASE: ${POSTGRES_DB:-past_exam}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in oracle.env}
+      R2_URL: ${R2_URL:?Set R2_URL in oracle.env}
+      R2_ACCESS_KEY: ${R2_ACCESS_KEY:?Set R2_ACCESS_KEY in oracle.env}
+      R2_ACCESS_TOKEN: ${R2_ACCESS_TOKEN:?Set R2_ACCESS_TOKEN in oracle.env}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME:?Set R2_BUCKET_NAME in oracle.env}
+      R2_FILE_PATH: ${R2_FILE_PATH:?Set R2_FILE_PATH in oracle.env}
+      HASH_KEY: ${HASH_KEY:?Set HASH_KEY in oracle.env}
+      ORIGIN: ${FRONTEND_ORIGIN:-https://past-exam.ntpu.cc}
+      GOOGLE_SERVICE_CLIENT_ID: ${GOOGLE_SERVICE_CLIENT_ID:?Set GOOGLE_SERVICE_CLIENT_ID in oracle.env}
+      GOOGLE_SERVICE_SERCET: ${GOOGLE_SERVICE_SERCET:?Set GOOGLE_SERVICE_SERCET in oracle.env}
+      AWS_EMAIL_SENDER: ${AWS_EMAIL_SENDER:-}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-}
+      AWS_ACCESS_SECRET: ${AWS_ACCESS_SECRET:-}
+      LOG_TAIL_SOURCE_KEY: ${LOG_TAIL_SOURCE_KEY:-}
+      SERVICE_NAME: ${SERVICE_NAME:-oracle-production}
+      COMMIT_SHA: ${BACKEND_SHA:?Set BACKEND_SHA}
+    networks:
+      app:
+      caddy:
+        aliases:
+          - past-exam-api-${DEPLOY_SLOT:?Set DEPLOY_SLOT}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/ping', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+    mem_limit: 1536m
+    cpus: 1.0
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  frontend:
+    build:
+      context: ${FRONTEND_SOURCE_DIR:?Set FRONTEND_SOURCE_DIR}
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_ORIGIN: ${NEXT_PUBLIC_API_ORIGIN:-https://past-exam-api.ntpu.cc}
+        NEXT_PUBLIC_GOOGLE_LOGIN_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_LOGIN_CLIENT_ID:?Set NEXT_PUBLIC_GOOGLE_LOGIN_CLIENT_ID in oracle.env}
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+        NEXT_PUBLIC_CLARITY_MEASUREMENT_ID: ${NEXT_PUBLIC_CLARITY_MEASUREMENT_ID:-}
+        NEXT_PUBLIC_GIT_BRANCH: main
+    image: ${FRONTEND_IMAGE:?Set FRONTEND_IMAGE}
+    restart: unless-stopped
+    networks:
+      caddy:
+        aliases:
+          - past-exam-frontend-${DEPLOY_SLOT:?Set DEPLOY_SLOT}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 5s
+    mem_limit: 64m
+    cpus: 0.25
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+networks:
+  app:
+    external: true
+    name: past-exam-internal
+  caddy:
+    external: true
+    name: past-exam-caddy

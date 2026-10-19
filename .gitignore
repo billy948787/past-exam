@@ -6,6 +6,9 @@ ntpu-past-exam-service/
 .env
 .env.*
 *.local
+oracle.env
+deploy/output.sql
+__pycache__/
 
 # OS
 .DS_Store

@@ -1,0 +1,14 @@
+[Unit]
+Description=Deploy NTPU Past Exam from GitHub main
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=opc
+Group=opc
+WorkingDirectory=/home/opc/past-exam-managed
+ExecStart=/home/opc/past-exam-managed/bin/deploy-main.sh
+UMask=0077
+Nice=10

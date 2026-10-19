@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch NTPU Past Exam GitHub main branches
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+RandomizedDelaySec=10s
+Persistent=true
+Unit=past-exam-main-watch.service
+
+[Install]
+WantedBy=timers.target
