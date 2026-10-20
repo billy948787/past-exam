@@ -146,7 +146,7 @@ Install the scripts without enabling the timer:
 Run and inspect the first deployment, then enable the watcher:
 
 ```bash
-/home/opc/past-exam-managed/bin/deploy-main.sh
+/usr/local/bin/past-exam-deploy-main
 sudo systemctl enable --now past-exam-main-watch.timer
 systemctl list-timers past-exam-main-watch.timer
 journalctl -u past-exam-main-watch.service --since today
@@ -155,7 +155,7 @@ journalctl -u past-exam-main-watch.service --since today
 Roll back to the previous healthy slot:
 
 ```bash
-/home/opc/past-exam-managed/bin/rollback-main.sh
+/usr/local/bin/past-exam-rollback-main
 ```
 
 Database schema migrations are intentionally not run by the watcher. A commit

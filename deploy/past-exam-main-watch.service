@@ -9,6 +9,6 @@ Type=oneshot
 User=opc
 Group=opc
 WorkingDirectory=/home/opc/past-exam-managed
-ExecStart=/home/opc/past-exam-managed/bin/deploy-main.sh
+ExecStart=/usr/local/bin/past-exam-deploy-main
 UMask=0077
 Nice=10

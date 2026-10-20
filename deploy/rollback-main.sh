@@ -5,7 +5,7 @@ base_dir=${PAST_EXAM_DEPLOY_DIR:-/home/opc/past-exam-managed}
 state_dir="$base_dir/state"
 previous_state="$state_dir/previous.env"
 current_state="$state_dir/current.env"
-switch_caddy="$base_dir/bin/switch-caddy.sh"
+switch_caddy=${PAST_EXAM_SWITCH_CADDY:-/usr/local/bin/past-exam-switch-caddy}
 
 test -r "$previous_state"
 test -r "$current_state"

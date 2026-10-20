@@ -7,7 +7,7 @@ state_dir="$base_dir/state"
 config_dir="$base_dir/config"
 env_file=${PAST_EXAM_ENV_FILE:-/home/opc/past-exam/oracle.env}
 compose_file="$config_dir/docker-compose.managed.yml"
-switch_caddy="$base_dir/bin/switch-caddy.sh"
+switch_caddy=${PAST_EXAM_SWITCH_CADDY:-/usr/local/bin/past-exam-switch-caddy}
 frontend_dir="$source_dir/frontend"
 backend_dir="$source_dir/backend"
 
