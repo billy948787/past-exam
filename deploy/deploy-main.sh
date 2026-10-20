@@ -197,9 +197,7 @@ for _ in $(seq 1 10); do
 done
 
 if [[ "$public_health_ok" != 1 ]]; then
-  cp "$caddy_backup" /home/opc/vaultwarden/Caddyfile
-  docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
-  docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
+  "$switch_caddy" --restore "$caddy_backup"
   printf 'Public health check failed; restored Caddy configuration.\n' >&2
   exit 1
 fi

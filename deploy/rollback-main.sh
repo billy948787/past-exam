@@ -9,6 +9,8 @@ switch_caddy=${PAST_EXAM_SWITCH_CADDY:-/usr/local/bin/past-exam-switch-caddy}
 
 test -r "$previous_state"
 test -r "$current_state"
+exec 9>"$state_dir/deploy.lock"
+flock -n 9
 
 read_state_value() {
   local file=$1

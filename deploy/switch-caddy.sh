@@ -2,6 +2,29 @@
 set -Eeuo pipefail
 
 slot=${1:-}
+caddy_file=${CADDY_FILE:-/home/opc/vaultwarden/Caddyfile}
+state_dir=${PAST_EXAM_STATE_DIR:-/home/opc/past-exam-managed/state}
+container_candidate=/tmp/Caddyfile.past-exam-managed
+
+stage_and_validate() {
+  local source_file=$1
+  docker cp "$source_file" "caddy:$container_candidate"
+  docker exec caddy caddy validate --config "$container_candidate" --adapter caddyfile >/dev/null
+}
+
+reload_staged() {
+  docker exec caddy caddy reload --config "$container_candidate" --adapter caddyfile >/dev/null
+}
+
+if [[ "$slot" == --restore ]]; then
+  restore_file=${2:-}
+  test -r "$restore_file"
+  cp "$restore_file" "$caddy_file"
+  stage_and_validate "$restore_file"
+  reload_staged
+  exit 0
+fi
+
 case "$slot" in
   blue|green) ;;
   *)
@@ -10,8 +33,6 @@ case "$slot" in
     ;;
 esac
 
-caddy_file=${CADDY_FILE:-/home/opc/vaultwarden/Caddyfile}
-state_dir=${PAST_EXAM_STATE_DIR:-/home/opc/past-exam-managed/state}
 frontend_upstream="past-exam-frontend-${slot}"
 backend_upstream="past-exam-api-${slot}"
 
@@ -30,17 +51,19 @@ sed -E \
 grep -Fq "reverse_proxy ${frontend_upstream}:8080" "$temporary"
 grep -Fq "reverse_proxy ${backend_upstream}:8080" "$temporary"
 
-# Copy in place so Docker's bind-mounted Caddyfile keeps the same inode.
+# Persist the next configuration for container restarts. Load the same candidate
+# through /tmp because a single-file bind mount can keep an older host inode.
 cp "$temporary" "$caddy_file"
-if ! docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null; then
+if ! stage_and_validate "$temporary"; then
   cp "$backup" "$caddy_file"
+  stage_and_validate "$backup" && reload_staged || true
   printf 'Caddy validation failed; restored %s\n' "$backup" >&2
   exit 1
 fi
 
-if ! docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null; then
+if ! reload_staged; then
   cp "$backup" "$caddy_file"
-  docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null || true
+  stage_and_validate "$backup" && reload_staged || true
   printf 'Caddy reload failed; restored %s\n' "$backup" >&2
   exit 1
 fi
