@@ -133,6 +133,21 @@ printf 'Building main: slot=%s frontend=%s backend=%s\n' \
   "$deploy_slot" "${frontend_sha:0:12}" "${backend_sha:0:12}"
 "${compose[@]}" config --quiet
 "${compose[@]}" build
+
+backup_timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+backup_dir="/home/opc/backups/past-exam-auto/$backup_timestamp"
+install -d -m 700 "$backup_dir"
+docker exec ntpu-past-exam-postgres-1 /bin/sh -c \
+  'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
+  > "$backup_dir/postgres.dump"
+docker exec -i ntpu-past-exam-postgres-1 pg_restore -l \
+  < "$backup_dir/postgres.dump" > /dev/null
+chmod 600 "$backup_dir/postgres.dump"
+
+printf 'Applying PostgreSQL migrations from backend=%s\n' "${backend_sha:0:12}"
+"${compose[@]}" run --rm --no-deps backend alembic upgrade head
+"${compose[@]}" run --rm --no-deps backend alembic check
+
 "${compose[@]}" up -d --no-build --remove-orphans
 
 wait_for_health() {
@@ -171,16 +186,6 @@ frontend_id=$("${compose[@]}" ps -q frontend)
 docker exec "$backend_id" python -c \
   "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/ping', timeout=5)"
 docker exec "$frontend_id" wget -q -O /dev/null http://127.0.0.1:8080/healthz
-
-backup_timestamp=$(date -u +%Y%m%dT%H%M%SZ)
-backup_dir="/home/opc/backups/past-exam-auto/$backup_timestamp"
-install -d -m 700 "$backup_dir"
-docker exec ntpu-past-exam-postgres-1 /bin/sh -c \
-  'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
-  > "$backup_dir/postgres.dump"
-docker exec -i ntpu-past-exam-postgres-1 pg_restore -l \
-  < "$backup_dir/postgres.dump" > /dev/null
-chmod 600 "$backup_dir/postgres.dump"
 
 caddy_backup=$("$switch_caddy" "$deploy_slot")
 

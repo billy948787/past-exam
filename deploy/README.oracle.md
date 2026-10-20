@@ -158,9 +158,15 @@ Roll back to the previous healthy slot:
 /usr/local/bin/past-exam-rollback-main
 ```
 
-Database schema migrations are intentionally not run by the watcher. A commit
-that changes the schema requires a reviewed PostgreSQL-compatible migration
-before its application code is merged to `main`.
+Before starting the inactive slot, the watcher creates and validates a
+PostgreSQL dump, then runs `alembic upgrade head` and `alembic check` from the
+new backend image. A migration failure leaves the current slot serving traffic.
+
+Migrations merged to `main` must be PostgreSQL-compatible and safe while the
+previous application version is still serving traffic. Use expand/contract
+changes for destructive or incompatible schema updates. Successful database
+migrations are not automatically downgraded when application traffic is rolled
+back.
 
 ## Rollback
 
